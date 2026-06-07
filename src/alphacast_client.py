@@ -55,9 +55,16 @@ class AlphaCastClient:
 
     MCP_URL = "https://mcp.alphacast.io"
 
-    def __init__(self, api_key: Optional[str] = None, simulation_mode: bool = False):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        simulation_mode: bool = False,
+        csv_path: Optional[str] = None,
+    ):
         self.api_key = api_key or os.getenv("ALPHACAST_API_KEY", "")
         self.simulation_mode = simulation_mode
+        # Fuente CSV (export de Alphacast). Si está seteada, get_panel_data lee de ahí.
+        self.csv_path = csv_path or os.getenv("ALPHACAST_CSV_PATH")
         # Solo instanciar Anthropic cuando se va a usar (no en simulación)
         self._client: Optional[Anthropic] = None
 
@@ -95,7 +102,15 @@ class AlphaCastClient:
     def get_panel_data(self, tickers: Optional[List[str]] = None) -> List[Dict]:
         """
         Obtiene datos de múltiples tickers. Por defecto usa PANEL_LIDER completo.
+
+        Orden de fuentes:
+          1. simulation_mode  → datos simulados
+          2. csv_path seteado → CSV (export de Alphacast)
+          3. caso contrario   → MCP AlphaCast vía Claude
         """
+        if not self.simulation_mode and self.csv_path:
+            return self._load_from_csv(tickers)
+
         tickers = tickers or PANEL_LIDER
         results = []
         for ticker in tickers:
@@ -125,6 +140,67 @@ class AlphaCastClient:
             return all(checks)
         except Exception:
             return False
+
+    # ------------------------------------------------------------------
+    # Fuente CSV (export de Alphacast)
+    # ------------------------------------------------------------------
+
+    def _load_from_csv(self, tickers: Optional[List[str]] = None) -> List[Dict]:
+        """
+        Carga el panel desde un CSV exportado de Alphacast.
+
+        Columnas esperadas: ticker, sector, price_usd, p_e_forward, p_bv,
+        roe, margen_neto, ev_ebitda, market_cap_usd_billions.
+
+        roe y margen_neto vienen como porcentaje (12.10 = 12.10%) y se
+        convierten a decimal (0.121). Los valores 'NA'/''/None → 0.0.
+        """
+        import csv
+        from datetime import date
+
+        wanted = {t.upper() for t in tickers} if tickers else None
+        results: List[Dict] = []
+
+        with open(self.csv_path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                ticker = (row.get("ticker") or "").strip().upper()
+                if not ticker or (wanted and ticker not in wanted):
+                    continue
+
+                data = {
+                    "ticker": ticker,
+                    "sector": (row.get("sector") or "").strip()
+                    or SECTOR_MAP.get(ticker, "Otros"),
+                    "price_usd": self._num(row.get("price_usd")),
+                    "p_e_forward": self._num(row.get("p_e_forward")),
+                    "p_bv": self._num(row.get("p_bv")),
+                    "roe": self._num(row.get("roe")) / 100.0,
+                    "margen_neto": self._num(row.get("margen_neto")) / 100.0,
+                    "ev_ebitda": self._num(row.get("ev_ebitda")),
+                    "market_cap_usd_billions": self._num(row.get("market_cap_usd_billions")),
+                    "timestamp": str(date.today()),
+                }
+
+                if self.validate_data(data):
+                    results.append(data)
+                else:
+                    logger.warning(f"Datos inválidos para {ticker} en CSV, descartado")
+
+        logger.info(f"CSV: {len(results)} tickers cargados desde {self.csv_path}")
+        return results
+
+    @staticmethod
+    def _num(value, default: float = 0.0) -> float:
+        """Convierte un valor de celda a float; 'NA'/''/None → default."""
+        if value is None:
+            return default
+        s = str(value).strip().replace("%", "").replace(",", "")
+        if s == "" or s.upper() == "NA":
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            return default
 
     # ------------------------------------------------------------------
     # Internos

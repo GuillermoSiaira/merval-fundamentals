@@ -179,9 +179,15 @@ class FundamentalAnalyzer:
         alerts = []
         for s, sig, _ in ranked:
             if sig == Signal.AVOID:
-                alerts.append(
-                    f"🔴 {s.ticker}: ROE {s.roe*100:.1f}% — pérdidas o rentabilidad mínima"
-                )
+                if s.roe < self.ROE_AVOID_MAX:
+                    alerts.append(
+                        f"🔴 {s.ticker}: ROE {s.roe*100:.1f}% — pérdidas / rentabilidad muy baja"
+                    )
+                else:
+                    alerts.append(
+                        f"⛔ {s.ticker}: EV/EBITDA {s.ev_ebitda:.1f}x — valuación extrema "
+                        f"(ROE {s.roe*100:.1f}%)"
+                    )
             elif sig == Signal.SELL:
                 alerts.append(
                     f"🟡 {s.ticker}: Sobrevalorada P/BV {s.p_bv:.2f}x con ROE {s.roe*100:.1f}%"

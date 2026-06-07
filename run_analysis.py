@@ -61,6 +61,10 @@ def parse_args(argv=None):
         help="Usa datos simulados (no requiere credenciales de AlphaCast)",
     )
     p.add_argument(
+        "--csv", metavar="PATH", default="data/merval_panel.csv",
+        help="CSV con los datos del panel (export de Alphacast). Default: data/merval_panel.csv",
+    )
+    p.add_argument(
         "--no-send", action="store_true",
         help="No envía a Telegram; imprime el mensaje por stdout",
     )
@@ -82,11 +86,12 @@ def main(argv=None) -> int:
             notifier = TelegramNotifier()
 
         # --- 1. Datos ---
-        logger.info(
-            "Obteniendo datos del panel (%s)...",
-            "simulación" if args.simulate else "AlphaCast",
-        )
-        client = AlphaCastClient(simulation_mode=args.simulate)
+        if args.simulate:
+            logger.info("Obteniendo datos del panel (simulación)...")
+            client = AlphaCastClient(simulation_mode=True)
+        else:
+            logger.info("Obteniendo datos del panel (CSV: %s)...", args.csv)
+            client = AlphaCastClient(csv_path=args.csv)
         raw_data = client.get_panel_data(PANEL_LIDER)
 
         if len(raw_data) < MIN_TICKERS:

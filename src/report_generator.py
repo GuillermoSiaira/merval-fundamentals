@@ -68,7 +68,7 @@ class ReportGenerator:
             f"🔴 {summary['sell']} SELL  •  ⛔ {summary['avoid']} AVOID",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━",
-            "_Generado automáticamente · MCP AlphaCast + Claude_",
+            "_Generado automáticamente · Datos: Alphacast_",
             "_Lun / Mié / Vie · 08:00 ART_",
         ]
 
@@ -188,7 +188,7 @@ class ReportGenerator:
 </div>
 
 <footer>
-  Generado automáticamente · MCP AlphaCast + Claude · github.com/GuillermoSiaira/merval-fundamentals
+  Generado automáticamente · Datos: Alphacast · github.com/GuillermoSiaira/merval-fundamentals
 </footer>
 </body>
 </html>"""
