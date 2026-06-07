@@ -146,4 +146,7 @@ class TestNotifierMocked:
         assert n.test_connection() is True
 
     @patch("requests.get")
-    
+    def test_connection_test_fails(self, mock_get):
+        mock_get.side_effect = Exception("network down")
+        n = TelegramNotifier(bot_token="123:ABC", chat_id="-100")
+        assert n.test_connection() is False

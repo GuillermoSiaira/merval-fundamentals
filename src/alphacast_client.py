@@ -229,4 +229,5 @@ Respondé ÚNICAMENTE con un JSON válido con estas keys exactas (sin texto adic
             "ticker": ticker,
             "sector": SECTOR_MAP.get(ticker, "Otros"),
             "timestamp": str(date.today()),
-            **
+            **d,
+        }

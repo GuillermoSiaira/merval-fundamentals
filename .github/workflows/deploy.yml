@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests (pre-deploy)
         run: |
-          pytest tests/test_analyzer.py tests/test_telegram.py \
+          pytest tests/ \
             -v --tb=short -m "not live"
 
       - name: Authenticate to Google Cloud
