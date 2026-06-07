@@ -40,5 +40,8 @@ desktop.ini
 *.log
 logs/
 
+# Reportes generados
+merval_report.html
+
 # GCP
 .gcloudignore
